@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "agent/";
+
+service agent {
+  rpc interact(Packet) returns (Packet);
+}
+
+enum PacketType {
+  DEPLOY = 0;
+  TRANSPORT = 1;
+  INVOKE = 2;
+}
+
+message Packet {
+  PacketType type = 1;
+  string sourceAddress = 2;
+  string sendAddress = 3;
+  oneof payload {
+    Invoke invoke = 4;
+    Transport transport = 5;
+    Deploy deploy = 6;
+  }
+}
+
+message Deploy {
+
+}
+
+message Transport {
+  string data = 1;
+}
+
+message Invoke {
+  string funcName = 1;
+  string args = 2;
+}
