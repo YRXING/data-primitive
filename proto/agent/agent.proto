@@ -33,5 +33,5 @@ message Transport {
 
 message Invoke {
   string funcName = 1;
-  string args = 2;
+  repeated string args = 2;
 }

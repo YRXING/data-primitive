@@ -12,7 +12,9 @@
 
 
 
-### 数据流
+### 数源体交互图
+
+下面是供应链场景下数源体交互图。
 
 根据供应链金融的三种融资模式：应收账款融资、未来货权融资、融通仓融资，构建以下数源体联动图
 
@@ -21,41 +23,11 @@
 - 数源体A：上游供货商
 - 数源体B：金融机构（商业银行等）
 - 数源体C：第三方物流
-- 数源体D：下游购货商
-
-
-
-
+- 数源体D：下游购货商、经销商
 
 ## 系统设计
 
 ### 感知
-
-起始数源体自己产生，`数据驱动行为，数据形式是什么需要简单定一下。`
-
-```go
-func main(){
-  //生成模拟数据
-  mockData := random()
-  /*
-  数据处理逻辑
-  */
-  
-  /*
-  发现数源体
-  生成数据包
-  发送
-  */
-  DSource := getDSource(service)
-  
-  packet := generatePacket(mockData)
-  
-  send(packet,Dsource)
-}
-
-```
-
-
 
 ### 认知
 
@@ -63,38 +35,62 @@ func main(){
 
 相互了解的信息包括：数源体自身信息，包括资源、能力、数据。
 
-模拟方法：
+**<font color=red>解决方案：</font>**
 
-通过注册中心实现，带kv存储的，选型：consul/etcd。
+通过注册中心实现，带kv存储的。
 
-key为数源体名字
+经调研后，确定consul为注册中心：简单易用，不需要sdk集成，支持多数据中心、健康检查。
 
-value为数源体所有可能用到的信息
+```json
+{
+   "services": [
+       {
+         "id":"server1",
+         "name":"business_service1",
+         "address": "10.10.102.1",
+         "tags": [
+             "webapi"
+         ],
+         "port":80,
+       },
+       {
+         "id":"server2",
+         "name":"business_service2",
+         "address": "10.10.102.2",
+         "tags": [
+             "webapi2"
+         ],
+         "port":81,
+       }
+   ]
+}
+```
+
+kv存储充当数源体的数据后端，key为数源体名字，value为数源体所有可能用到的信息
 
 ```json
 {
   "name": "DSourceA",
-  "info": {
-  	"ip": "10.10.102.1",
-    "port": 4001
-  },
 	"services": [
     {
     "name": "business_service1",
     "args": ""
     }
-	]
+	],
+  
   /*
   *待补充
   */
 }
 ```
 
-
-
 当数源体感知到数据后，提炼数据，去存储中心查询服务。
 
+
+
 ### 联动
+
+**<font color=red>解决方案：</font>**
 
 通信采用gRPC，各个数源体对外定义成统一的服务格式和通信格式
 
@@ -140,36 +136,54 @@ message Transport {
 
 
 
-每个数源体的联动代码interact整体逻辑应该一致，区别是调用的业务服务不同。
-
-根据不同的数据包采取不同的动作。
+每个数源体的联动代码interact整体逻辑应该一致，区别是调用的业务服务不同,根据不同的数据包采取不同的动作。
 
 目前主要实现INVOKE数据包，调用完服务后，下一步动作可以分为接着调用其他服务，或者返回调用方所需要的数据。
 
-
-
 ```go
-func interact(Packet p) {
-  switch p {
-    case INVOKE:
-    	v:=call(p.invoke.funcName,p.invoke.args)
-    	//根据v来确定下一步动作
-    case Transport:
-      
-  }
+func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error)  {
+	switch p.Type {
+	case agent.PacketType_INVOKE:
+		res, err:= util.Call(s.funcs,p.GetInvoke().FuncName,p.GetInvoke().Args)
+		//s.client = util.NewClient(p.SendAddress)
+		if err != nil {
+			// change []reflect.Value to []interface{}
+			data := make([]interface{},0)
+			for _, v := range res {
+				data = append(data,v.Interface())
+			}
+
+			bytes,_ := json.Marshal(data)
+			// make return packet
+			pkt := &agent.Packet{
+				Type: agent.PacketType_TRANSPORT,
+				SourceAddress: s.address,
+				Payload: &agent.Packet_Transport{
+					Transport: &agent.Transport{
+						Data: string(bytes),
+					},
+				},
+			}
+			return pkt,nil
+		}
+	case agent.PacketType_TRANSPORT:
+
+	case agent.PacketType_DEPLOY:
+
+	}
+	return nil,nil
 }
 ```
 
-关键在于数据形式是怎样，如何根据数据得到想要调用的服务。
-
-具体规则需要确定
-
 ### 执行
-
-
 
 ## 问题及难点
 
-- 先根据关键字进行服务匹配，根据原数据+简单逻辑判断-> 需要调用的服务
-- 相同服务的数源体可以有多个
+- 如何根据感知的数据来确定联动其他数源体所需要的相关参数？
+
+  先根据关键字进行服务匹配，根据原数据+简单逻辑判断-> 需要调用的服务
+
+- 相同服务的数源体有多个时，如何却定联动哪一个？
+
+  初期根据设定好的规则，不同数据走不同的路径
 
