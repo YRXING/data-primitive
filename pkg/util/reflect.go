@@ -6,7 +6,7 @@ import (
 )
 
 func Call(m map[string]interface{}, funcName string, params ...interface{}) (result []reflect.Value,
-	err error)  {
+	err error) {
 	f := reflect.ValueOf(m[funcName])
 
 	// compare the number of func arguments
@@ -16,9 +16,9 @@ func Call(m map[string]interface{}, funcName string, params ...interface{}) (res
 	}
 
 	// make args for func from params interface
-	in := make([]reflect.Value,len(params))
+	in := make([]reflect.Value, len(params))
 	for k, p := range params {
-		in[k] =  reflect.ValueOf(p)
+		in[k] = reflect.ValueOf(p)
 	}
 
 	result = f.Call(in)

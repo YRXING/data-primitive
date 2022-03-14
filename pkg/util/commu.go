@@ -6,13 +6,35 @@ import (
 	"log"
 )
 
-func NewClient(address string) agent.AgentClient {
-	conn,err := grpc.Dial(address)
+func NewConn(address string) *grpc.ClientConn {
+	conn, err := grpc.Dial(address,grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v",err)
+		log.Fatalf("did not connect: %v", err)
 	}
+	return conn
+}
 
-	c := agent.NewAgentClient(conn)
+func GenerateInvokePacket(sa, funcName string, args []byte) *agent.Packet {
+	return &agent.Packet{
+		Type:          agent.PacketType_INVOKE,
+		SourceAddress: sa,
+		Payload: &agent.Packet_Invoke{
+			Invoke: &agent.Invoke{
+				FuncName: funcName,
+				Args:     args,
+			},
+		},
+	}
+}
 
-	return c
+func GenerateDataPacket(sa string, data []byte) *agent.Packet {
+	return &agent.Packet{
+		Type:          agent.PacketType_TRANSPORT,
+		SourceAddress: sa,
+		Payload: &agent.Packet_Transport{
+			Transport: &agent.Transport{
+				Data: data,
+			},
+		},
+	}
 }

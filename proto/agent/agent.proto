@@ -28,10 +28,10 @@ message Deploy {
 }
 
 message Transport {
-  string data = 1;
+  bytes data = 1;
 }
 
 message Invoke {
   string funcName = 1;
-  repeated string args = 2;
+  bytes args = 2;
 }
