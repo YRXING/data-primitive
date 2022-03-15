@@ -3,10 +3,11 @@ package distributor
 import (
 	"context"
 	"encoding/json"
-	"github.com/YRXING/data-primitive/pkg/supplier"
+	"log"
+
+	. "github.com/YRXING/data-primitive/pkg/constants"
 	"github.com/YRXING/data-primitive/pkg/util"
 	"github.com/YRXING/data-primitive/proto/agent"
-	"log"
 )
 
 type distributor struct {
@@ -25,9 +26,10 @@ func (d *distributor) Run() error {
 	// get supplier information
 	conn := util.NewConn("127.0.0.1:8080")
 	defer conn.Close()
+
 	c := agent.NewAgentClient(conn)
-	o := &supplier.Order{
-		OrderType:  supplier.FINACINGWAREHOUSE_ORDER,
+	o := &Order{
+		OrderType:  NORMAL,
 		OrderPrice: 10,
 		OrderCount: 10,
 	}
@@ -42,6 +44,7 @@ func (d *distributor) Run() error {
 	return nil
 }
 
+
 func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error) {
 	switch p.Type {
 	case agent.PacketType_INVOKE:
@@ -53,4 +56,5 @@ func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Pac
 	}
 	return nil, nil
 }
+
 

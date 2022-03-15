@@ -2,12 +2,16 @@ package main
 
 import (
 	"github.com/YRXING/data-primitive/pkg/distributor"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 	d := distributor.NewDistributor()
 	d.Run()
 
-	time.Sleep(3*time.Minute)
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGINT,syscall.SIGTERM)
+	<-ch
 }

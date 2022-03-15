@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/YRXING/data-primitive/pkg/supplier"
+	"github.com/YRXING/data-primitive/pkg/bank"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	s := supplier.NewSupplier()
-	s.Run()
+	b := bank.NewBank()
+	b.Run()
 
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT,syscall.SIGTERM)
