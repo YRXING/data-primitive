@@ -22,7 +22,7 @@ func NewDistributor() *distributor {
 
 func (d *distributor) Run() error {
 	// run gRPC server
-	go agent.RunServer(d.address,d)
+	go agent.RunServer(d.address, d)
 	// get supplier information
 	conn := util.NewConn("127.0.0.1:8080")
 	defer conn.Close()
@@ -44,7 +44,6 @@ func (d *distributor) Run() error {
 	return nil
 }
 
-
 func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error) {
 	switch p.Type {
 	case agent.PacketType_INVOKE:
@@ -56,5 +55,3 @@ func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Pac
 	}
 	return nil, nil
 }
-
-

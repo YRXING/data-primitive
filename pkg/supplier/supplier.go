@@ -21,7 +21,7 @@ type supplier struct {
 func NewSupplier() *supplier {
 	s := &supplier{
 		address: "127.0.0.1:8080",
-		name: "supplierA",
+		name:    "supplierA",
 	}
 
 	s.funcs = map[string]interface{}{
@@ -31,8 +31,7 @@ func NewSupplier() *supplier {
 }
 
 func (s *supplier) Run() error {
-	go agent.RunServer(s.address,s)
-
+	go agent.RunServer(s.address, s)
 
 	return nil
 }
@@ -43,7 +42,7 @@ func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet
 		res, err := util.Call(s.funcs, p.GetInvoke().FuncName, p.GetInvoke().Args)
 		if err != nil {
 			log.Println(err)
-			return nil,err
+			return nil, err
 		}
 		//change []reflect.Value to []interface{}
 		data := make([]interface{}, 0)
@@ -52,9 +51,9 @@ func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet
 		}
 
 		bytes, err := json.Marshal(data)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
-			return nil,err
+			return nil, err
 		}
 		// make return packet
 		pkt := util.GenerateDataPacket(s.address, bytes)
@@ -67,10 +66,9 @@ func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet
 	return nil, nil
 }
 
-
 func (s *supplier) GetProducts(bytes []byte) *Products {
 	var (
-		o Order
+		o   Order
 		res *Products
 	)
 	err := json.Unmarshal(bytes, &o)
@@ -82,21 +80,19 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 	case NORMAL:
 		res = &Products{
 			SupplierName: s.name,
-			OrderState: SUCCESS,
+			OrderState:   SUCCESS,
 		}
 	case FINACINGWAREHOUSE:
 
 	case ACCOUNTRECEIVABLE:
-
 
 	case ADVANCE:
 
 	default:
 		res = &Products{
 			SupplierName: "unknown",
-			OrderState: ERROR,
+			OrderState:   ERROR,
 		}
 	}
 	return res
 }
-

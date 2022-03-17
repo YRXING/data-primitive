@@ -3,25 +3,25 @@ package util
 import (
 	"github.com/YRXING/data-primitive/proto/agent"
 	"google.golang.org/grpc"
-	"log"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"log"
 	"time"
 )
 
 func NewConn(address string) *grpc.ClientConn {
 	var (
 		conn *grpc.ClientConn
-		err error
+		err  error
 	)
 
 	// create a connect until it successes or timeout
-	wait.Poll(3*time.Second, 5*time.Minute, func() (bool,error) {
-		conn, err = grpc.Dial(address,grpc.WithInsecure())
+	wait.Poll(3*time.Second, 5*time.Minute, func() (bool, error) {
+		conn, err = grpc.Dial(address, grpc.WithInsecure())
 		if err != nil {
-			log.Println("can not connect: ",address)
-			return false,err
+			log.Println("can not connect: ", address)
+			return false, err
 		}
-		return true,nil
+		return true, nil
 	})
 
 	return conn

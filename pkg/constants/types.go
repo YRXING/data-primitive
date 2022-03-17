@@ -12,7 +12,7 @@ type Order struct {
 
 type Products struct {
 	SupplierName string `json:"supplier_name"`
-	OrderState   int `json:"order_state"`
+	OrderState   int    `json:"order_state"`
 }
 
 type Capital struct {
@@ -25,6 +25,5 @@ type Capital struct {
 type Form struct {
 	// The type indicates which method you will use to get the loan.
 	Type string
-	Num	int `json:"num"`
-
+	Num  int `json:"num"`
 }

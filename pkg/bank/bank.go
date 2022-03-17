@@ -7,7 +7,7 @@ import (
 
 type bank struct {
 	address string
-	funcs      map[string]interface{}
+	funcs   map[string]interface{}
 }
 
 func NewBank() *bank {
@@ -21,14 +21,13 @@ func NewBank() *bank {
 	return b
 }
 
-func (b *bank) Run()  {
-	go agent.RunServer(b.address,b)
+func (b *bank) Run() {
+	go agent.RunServer(b.address, b)
 }
 
 func (b *bank) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error) {
 	switch p.Type {
 	case agent.PacketType_INVOKE:
-
 
 	case agent.PacketType_TRANSPORT:
 
@@ -38,6 +37,6 @@ func (b *bank) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, er
 	return nil, nil
 }
 
-func (b *bank) GetLoan()  {
+func (b *bank) GetLoan() {
 
 }

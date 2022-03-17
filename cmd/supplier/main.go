@@ -12,6 +12,6 @@ func main() {
 	s.Run()
 
 	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT,syscall.SIGTERM)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 }
