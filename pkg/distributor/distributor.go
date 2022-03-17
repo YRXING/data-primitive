@@ -3,6 +3,7 @@ package distributor
 import (
 	"context"
 	"encoding/json"
+	"github.com/YRXING/data-primitive/pkg/trace"
 	"log"
 
 	. "github.com/YRXING/data-primitive/pkg/constants"
@@ -22,9 +23,12 @@ func NewDistributor() *distributor {
 
 func (d *distributor) Run() error {
 	// run gRPC server
-	go agent.RunServer(d.address, d)
+	go agent.RunServer(DISTRIBUTOR_SERVICE, d.address, d)
 	// get supplier information
-	conn := util.NewConn("127.0.0.1:8080")
+	tracer,closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
+	defer closer.Close()
+
+	conn := util.NewConn(tracer,"127.0.0.1:8080")
 	defer conn.Close()
 
 	c := agent.NewAgentClient(conn)

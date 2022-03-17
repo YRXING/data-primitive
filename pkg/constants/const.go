@@ -6,10 +6,10 @@ const (
 
 	// It refers to account receivable order, and the supplier can pledge the documents
 	// of accounts receivable orders.
-	ACCOUNTRECEIVABLE = "account-receivable-order"
+	ACCOUNT_RECEIVABLE = "account-receivable-order"
 
 	// It refers to financing warehouse order, and the supplier can pledge the inventory.
-	FINACINGWAREHOUSE = "financing-warehouse-order"
+	FINACING_WAREHOUSE = "financing-warehouse-order"
 
 	NORMAL = "normal"
 )
@@ -17,4 +17,14 @@ const (
 const (
 	SUCCESS = 1
 	ERROR   = 0
+)
+
+const (
+	DISTRIBUTOR_SERVICE = "distributor"
+
+	SUPPLIER_SERVICE = "supplier"
+
+	BANK_SERVICE = "bank"
+
+	LOGISTICS_SERVICE = "logistics"
 )

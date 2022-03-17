@@ -3,6 +3,7 @@ package supplier
 import (
 	"context"
 	"encoding/json"
+	"github.com/opentracing/opentracing-go"
 	"log"
 
 	. "github.com/YRXING/data-primitive/pkg/constants"
@@ -16,6 +17,7 @@ type supplier struct {
 	totalStock int
 	totalFunds int
 	funcs      map[string]interface{}
+	parentSpan opentracing.Span
 }
 
 func NewSupplier() *supplier {
@@ -31,12 +33,13 @@ func NewSupplier() *supplier {
 }
 
 func (s *supplier) Run() error {
-	go agent.RunServer(s.address, s)
+	go agent.RunServer(SUPPLIER_SERVICE,s.address, s)
 
 	return nil
 }
 
 func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error) {
+	s.parentSpan = opentracing.SpanFromContext(ctx)
 	switch p.Type {
 	case agent.PacketType_INVOKE:
 		res, err := util.Call(s.funcs, p.GetInvoke().FuncName, p.GetInvoke().Args)
@@ -76,15 +79,18 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 		return nil
 	}
 
+	span := opentracing.StartSpan("GetProducts",opentracing.ChildOf(s.parentSpan.Context()))
+	defer span.Finish()
+
 	switch o.OrderType {
 	case NORMAL:
 		res = &Products{
 			SupplierName: s.name,
 			OrderState:   SUCCESS,
 		}
-	case FINACINGWAREHOUSE:
+	case FINACING_WAREHOUSE:
 
-	case ACCOUNTRECEIVABLE:
+	case ACCOUNT_RECEIVABLE:
 
 	case ADVANCE:
 
