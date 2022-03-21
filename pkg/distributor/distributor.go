@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/YRXING/data-primitive/pkg/trace"
+	"github.com/opentracing/opentracing-go"
 	"log"
 
 	. "github.com/YRXING/data-primitive/pkg/constants"
@@ -13,7 +14,11 @@ import (
 
 type distributor struct {
 	address string
+	funcs      map[string]interface{}
+	parentSpan opentracing.Span
 }
+
+var _ DigitalObject = &distributor{}
 
 func NewDistributor() *distributor {
 	return &distributor{
@@ -28,7 +33,7 @@ func (d *distributor) Run() error {
 	tracer,closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
 	defer closer.Close()
 
-	conn := util.NewConn(tracer,"127.0.0.1:8080")
+	conn := util.NewConn(tracer,"127.0.0.1:8080",context.Background())
 	defer conn.Close()
 
 	c := agent.NewAgentClient(conn)
@@ -49,6 +54,9 @@ func (d *distributor) Run() error {
 }
 
 func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, error) {
+	// get the server side root span context
+	d.parentSpan = opentracing.SpanFromContext(ctx)
+
 	switch p.Type {
 	case agent.PacketType_INVOKE:
 
@@ -58,4 +66,12 @@ func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Pac
 
 	}
 	return nil, nil
+}
+
+func (d *distributor) GetAddress() string  {
+	return d.address
+}
+
+func (d *distributor) GetFuncs() map[string]interface{}  {
+	return d.funcs
 }

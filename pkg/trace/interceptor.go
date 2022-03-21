@@ -40,11 +40,12 @@ func ClientInterceptor(tracer opentracing.Tracer) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		var parentCtx opentracing.SpanContext
 		// get the parent spanContext from the context
+		// it is null here
 		parentSpan := opentracing.SpanFromContext(ctx)
 		if parentSpan != nil {
 			parentCtx = parentSpan.Context()
 		}
-		// make a new span to send to server
+		// record the client side trace
 		span := tracer.StartSpan(
 			method,
 			opentracing.ChildOf(parentCtx),
