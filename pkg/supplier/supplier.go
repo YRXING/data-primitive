@@ -103,6 +103,8 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 		// generate data
 		f := &Form{
 			Type: ACCOUNT_RECEIVABLE,
+			SupplierName: s.name,
+			DistributorName: o.DistributorName,
 			Num: 10000,
 		}
 		bytes,_ := json.Marshal(f)

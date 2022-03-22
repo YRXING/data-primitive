@@ -12,8 +12,9 @@ type logistics struct {
 	parentSpan opentracing.Span
 }
 
-func NewLogistics() {
+func NewLogistics() *logistics{
 
+	return &logistics{}
 }
 
 func Run(){

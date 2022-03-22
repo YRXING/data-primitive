@@ -23,10 +23,12 @@ var _ DigitalObject = &bank{}
 func NewBank() *bank {
 	b := &bank{
 		address: "127.0.0.1:8082",
+		name: "bank",
 	}
 
 	b.funcs = map[string]interface{}{
 		"GetLoan": b.GetLoan,
+		"PayForProducts": b.PayForProducts,
 	}
 	return b
 }
@@ -88,14 +90,49 @@ func (b *bank) GetLoan(bytes []byte) *Capital{
 
 	switch f.Type {
 	case ACCOUNT_RECEIVABLE:
-		res = &Capital{
-			BankName: b.name,
-			Num: f.Num,
+		conn := util.NewConn(opentracing.GlobalTracer(),
+			"127.0.0.1:8081",
+			context.Background())
+		defer conn.Close()
+		c := agent.NewAgentClient(conn)
+		// generate data
+		paymentPromise := &PaymentPromise{
+			DistributorName: f.DistributorName,
+			SupplierName: f.SupplierName,
+			Signatured: false,
+		}
+		bytes,_ := json.Marshal(paymentPromise)
+		p := util.GenerateInvokePacket(b.address,"GetPaymentPromise",bytes)
+		resP,err := c.Interact(opentracing.ContextWithSpan(context.Background(),span),p)
+		if err != nil || resP.GetTransport().Data == nil{
+			res = nil
+		}
+		
+		// verify the whether the payment promise is signatured
+		_ = json.Unmarshal(resP.GetTransport().Data,&paymentPromise)
+		if paymentPromise.Signatured{
+			res = &Capital{
+				BankName: b.name,
+				Num: f.Num,
+			}
 		}
 	default:
 		res = nil
 	}
 	return res
+}
+
+func (b *bank) PayForProducts(bytes []byte) bool{
+	var (
+		c *Capital
+	)
+
+	err := json.Unmarshal(bytes,c)
+	if err != nil {
+		return false
+	}
+	log.Printf("I have reveived capital. %v",c)
+	return true
 }
 
 func (b *bank) GetAddress() string  {
