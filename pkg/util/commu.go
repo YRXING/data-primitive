@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func NewConn(tracer opentracing.Tracer,address string,ctx context.Context) *grpc.ClientConn {
+func NewConn(tracer opentracing.Tracer, address string, ctx context.Context) *grpc.ClientConn {
 	var (
 		conn *grpc.ClientConn
 		err  error
@@ -26,7 +26,7 @@ func NewConn(tracer opentracing.Tracer,address string,ctx context.Context) *grpc
 			address,
 			grpc.WithInsecure(),
 			grpc.WithUnaryInterceptor(trace.ClientInterceptor(tracer)),
-			)
+		)
 		if err != nil {
 			log.Println("can not connect: ", address)
 			return false, err
@@ -50,7 +50,7 @@ func GenerateInvokePacket(sa, funcName string, args []byte) *agent.Packet {
 	}
 }
 
-func ProcessInvokePacket(do DigitalObject,p *agent.Packet) (*agent.Packet,error){
+func ProcessInvokePacket(do DigitalObject, p *agent.Packet) (*agent.Packet, error) {
 	res, err := Call(do.GetFuncs(), p.GetInvoke().FuncName, p.GetInvoke().Args)
 	if err != nil {
 		log.Println(err)

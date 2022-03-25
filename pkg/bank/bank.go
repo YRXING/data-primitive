@@ -11,10 +11,10 @@ import (
 )
 
 type bank struct {
-	address string
-	name string
-	funcs   map[string]interface{}
-	parentSpan opentracing.Span
+	address        string
+	name           string
+	funcs          map[string]interface{}
+	parentSpan     opentracing.Span
 	receivedPacket *agent.Packet
 }
 
@@ -23,18 +23,18 @@ var _ DigitalObject = &bank{}
 func NewBank() *bank {
 	b := &bank{
 		address: "127.0.0.1:8082",
-		name: "bank",
+		name:    "bank",
 	}
 
 	b.funcs = map[string]interface{}{
-		"GetLoan": b.GetLoan,
+		"GetLoan":        b.GetLoan,
 		"PayForProducts": b.PayForProducts,
 	}
 	return b
 }
 
-func (b *bank) Run() error{
-	go agent.RunServer(BANK_SERVICE,b.address, b)
+func (b *bank) Run() error {
+	go agent.RunServer(BANK_SERVICE, b.address, b)
 
 	return nil
 }
@@ -74,9 +74,9 @@ func (b *bank) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, er
 	return nil, nil
 }
 
-func (b *bank) GetLoan(bytes []byte) *Capital{
+func (b *bank) GetLoan(bytes []byte) *Capital {
 	var (
-		f Form
+		f   Form
 		res *Capital
 	)
 
@@ -85,7 +85,7 @@ func (b *bank) GetLoan(bytes []byte) *Capital{
 		return nil
 	}
 
-	span := opentracing.StartSpan("GetLoan",opentracing.FollowsFrom(b.parentSpan.Context()))
+	span := opentracing.StartSpan("GetLoan", opentracing.FollowsFrom(b.parentSpan.Context()))
 	defer span.Finish()
 
 	switch f.Type {
@@ -98,22 +98,22 @@ func (b *bank) GetLoan(bytes []byte) *Capital{
 		// generate data
 		paymentPromise := &PaymentPromise{
 			DistributorName: f.DistributorName,
-			SupplierName: f.SupplierName,
-			Signatured: false,
+			SupplierName:    f.SupplierName,
+			Signatured:      false,
 		}
-		bytes,_ := json.Marshal(paymentPromise)
-		p := util.GenerateInvokePacket(b.address,"GetPaymentPromise",bytes)
-		resP,err := c.Interact(opentracing.ContextWithSpan(context.Background(),span),p)
-		if err != nil || resP.GetTransport().Data == nil{
+		bytes, _ := json.Marshal(paymentPromise)
+		p := util.GenerateInvokePacket(b.address, "GetPaymentPromise", bytes)
+		resP, err := c.Interact(opentracing.ContextWithSpan(context.Background(), span), p)
+		if err != nil || resP.GetTransport().Data == nil {
 			res = nil
 		}
-		
+
 		// verify the whether the payment promise is signatured
-		_ = json.Unmarshal(resP.GetTransport().Data,&paymentPromise)
-		if paymentPromise.Signatured{
+		_ = json.Unmarshal(resP.GetTransport().Data, &paymentPromise)
+		if paymentPromise.Signatured {
 			res = &Capital{
 				BankName: b.name,
-				Num: f.Num,
+				Num:      f.Num,
 			}
 		}
 	default:
@@ -122,20 +122,20 @@ func (b *bank) GetLoan(bytes []byte) *Capital{
 	return res
 }
 
-func (b *bank) PayForProducts(bytes []byte) bool{
+func (b *bank) PayForProducts(bytes []byte) bool {
 	var (
 		c *Capital
 	)
 
-	err := json.Unmarshal(bytes,c)
+	err := json.Unmarshal(bytes, c)
 	if err != nil {
 		return false
 	}
-	log.Printf("I have reveived capital. %v",c)
+	log.Printf("I have reveived capital. %v", c)
 	return true
 }
 
-func (b *bank) GetAddress() string  {
+func (b *bank) GetAddress() string {
 	return b.address
 }
 

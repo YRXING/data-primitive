@@ -11,12 +11,12 @@ import (
 )
 
 type supplier struct {
-	address    string
-	name       string
-	totalStock int
-	totalFunds int
-	funcs      map[string]interface{}
-	parentSpan opentracing.Span
+	address        string
+	name           string
+	totalStock     int
+	totalFunds     int
+	funcs          map[string]interface{}
+	parentSpan     opentracing.Span
 	receivedPacket *agent.Packet
 }
 
@@ -35,7 +35,7 @@ func NewSupplier() *supplier {
 }
 
 func (s *supplier) Run() error {
-	go agent.RunServer(SUPPLIER_SERVICE,s.address, s)
+	go agent.RunServer(SUPPLIER_SERVICE, s.address, s)
 
 	return nil
 }
@@ -83,10 +83,10 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 	)
 	err := json.Unmarshal(bytes, &o)
 	if err != nil {
-		return ErrorProducts(s.name,"wrong data format")
+		return ErrorProducts(s.name, "wrong data format")
 	}
 
-	span := opentracing.StartSpan("GetProducts",opentracing.FollowsFrom(s.parentSpan.Context()))
+	span := opentracing.StartSpan("GetProducts", opentracing.FollowsFrom(s.parentSpan.Context()))
 	defer span.Finish()
 
 	switch o.OrderType {
@@ -102,31 +102,31 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 		c := agent.NewAgentClient(conn)
 		// generate data
 		f := &Form{
-			Type: ACCOUNT_RECEIVABLE,
-			SupplierName: s.name,
+			Type:            ACCOUNT_RECEIVABLE,
+			SupplierName:    s.name,
 			DistributorName: o.DistributorName,
-			Num: 10000,
+			Num:             10000,
 		}
-		bytes,_ := json.Marshal(f)
-		p := util.GenerateInvokePacket(s.address,"GetLoan",bytes)
-		resP,err := c.Interact(opentracing.ContextWithSpan(context.Background(),span),p)
-		if err != nil || resP.GetTransport().Data == nil{
-			res = ErrorProducts(s.name,"Insufficient funds!")
+		bytes, _ := json.Marshal(f)
+		p := util.GenerateInvokePacket(s.address, "GetLoan", bytes)
+		resP, err := c.Interact(opentracing.ContextWithSpan(context.Background(), span), p)
+		if err != nil || resP.GetTransport().Data == nil {
+			res = ErrorProducts(s.name, "Insufficient funds!")
 		}
 		res = SuccessProducts(s.name)
 
 	case ADVANCE:
 
 	default:
-		res = ErrorProducts("unknown","unknown order type!")
+		res = ErrorProducts("unknown", "unknown order type!")
 	}
 	return res
 }
 
-func (s *supplier) GetAddress() string  {
+func (s *supplier) GetAddress() string {
 	return s.address
 }
 
-func (s *supplier) GetFuncs() map[string]interface{}  {
+func (s *supplier) GetFuncs() map[string]interface{} {
 	return s.funcs
 }

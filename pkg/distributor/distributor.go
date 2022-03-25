@@ -13,8 +13,8 @@ import (
 )
 
 type distributor struct {
-	address string
-	name string
+	address    string
+	name       string
 	funcs      map[string]interface{}
 	parentSpan opentracing.Span
 }
@@ -24,7 +24,7 @@ var _ DigitalObject = &distributor{}
 func NewDistributor() *distributor {
 	d := &distributor{
 		address: "127.0.0.1:8081",
-		name: "distributor",
+		name:    "distributor",
 	}
 	d.funcs = map[string]interface{}{
 		"GetPaymentPromise": d.GetPaymentPromise,
@@ -36,17 +36,17 @@ func (d *distributor) Run() error {
 	// run gRPC server
 	go agent.RunServer(DISTRIBUTOR_SERVICE, d.address, d)
 	// get supplier information
-	tracer,closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
+	tracer, closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
 	defer closer.Close()
 
-	conn := util.NewConn(tracer,"127.0.0.1:8080",context.Background())
+	conn := util.NewConn(tracer, "127.0.0.1:8080", context.Background())
 	defer conn.Close()
 
 	c := agent.NewAgentClient(conn)
 	o := &Order{
-		OrderType:  ACCOUNT_RECEIVABLE,
-		OrderPrice: 10,
-		OrderCount: 10,
+		OrderType:       ACCOUNT_RECEIVABLE,
+		OrderPrice:      10,
+		OrderCount:      10,
 		DistributorName: d.name,
 	}
 
@@ -62,15 +62,15 @@ func (d *distributor) Run() error {
 	case NORMAL:
 	case ACCOUNT_RECEIVABLE:
 		// pay for products
-		conn = util.NewConn(tracer,"127.0.0.1:8082",context.Background())
+		conn = util.NewConn(tracer, "127.0.0.1:8082", context.Background())
 		c = agent.NewAgentClient(conn)
 		capital := &Capital{
 			BankName: "bank",
-			Num: o.OrderPrice*o.OrderCount,
+			Num:      o.OrderPrice * o.OrderCount,
 		}
 		bytes, _ = json.Marshal(capital)
-		p = util.GenerateInvokePacket(d.address,"PayForProducts",bytes)
-		res,err = c.Interact(opentracing.ContextWithSpan(context.Background(),d.parentSpan),p)
+		p = util.GenerateInvokePacket(d.address, "PayForProducts", bytes)
+		res, err = c.Interact(opentracing.ContextWithSpan(context.Background(), d.parentSpan), p)
 		log.Println(res)
 	}
 	return nil
@@ -118,7 +118,7 @@ func (d *distributor) GetPaymentPromise(bytes []byte) *PaymentPromise {
 		return nil
 	}
 
-	span := opentracing.StartSpan("GetPaymentPromise",opentracing.FollowsFrom(d.parentSpan.Context()))
+	span := opentracing.StartSpan("GetPaymentPromise", opentracing.FollowsFrom(d.parentSpan.Context()))
 	defer span.Finish()
 
 	// verify the order
@@ -128,10 +128,10 @@ func (d *distributor) GetPaymentPromise(bytes []byte) *PaymentPromise {
 	return &p
 }
 
-func (d *distributor) GetAddress() string  {
+func (d *distributor) GetAddress() string {
 	return d.address
 }
 
-func (d *distributor) GetFuncs() map[string]interface{}  {
+func (d *distributor) GetFuncs() map[string]interface{} {
 	return d.funcs
 }

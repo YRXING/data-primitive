@@ -15,13 +15,13 @@ type Order struct {
 type Products struct {
 	SupplierName string `json:"supplier_name"`
 	OrderState   int    `json:"order_state"`
-	Message string `json:"message"`
+	Message      string `json:"message"`
 }
 
 type PaymentPromise struct {
 	DistributorName string `json:"distributor_name"`
-	SupplierName string `json:"supplier_name"`
-	Signatured bool `json:"signatured"`
+	SupplierName    string `json:"supplier_name"`
+	Signatured      bool   `json:"signatured"`
 }
 type Capital struct {
 	BankName string `json:"bank_name"`
@@ -32,11 +32,11 @@ type Capital struct {
 // The bank will according to this form to consider whether you can get loan.
 type Form struct {
 	// The type indicates which method you will use to get the loan.
-	Type string
-	SupplierName string `json:"supplier_name"`
+	Type            string
+	SupplierName    string `json:"supplier_name"`
 	DistributorName string `json:"distributor_name"`
-	LogisticsName string `json:"logistics_name"`
-	Num  int `json:"num"`
+	LogisticsName   string `json:"logistics_name"`
+	Num             int    `json:"num"`
 }
 
 type Receipt struct {

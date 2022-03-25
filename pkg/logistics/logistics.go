@@ -7,17 +7,17 @@ import (
 )
 
 type logistics struct {
-	address string
-	funcs   map[string]interface{}
+	address    string
+	funcs      map[string]interface{}
 	parentSpan opentracing.Span
 }
 
-func NewLogistics() *logistics{
+func NewLogistics() *logistics {
 
 	return &logistics{}
 }
 
-func Run(){
+func Run() {
 
 }
 

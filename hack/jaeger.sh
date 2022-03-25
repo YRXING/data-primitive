@@ -12,3 +12,5 @@ docker run -d --name jaeger \
   -p 9411:9411 \
   jaegertracing/all-in-one
 
+# start a consul server
+docker run -d --name=dev-consul -p 8500:8500 -e CONSUL_BIND_INTERFACE=eth0 consul
