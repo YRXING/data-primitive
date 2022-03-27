@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// 根据需求进行服务定制
 type ConsulService struct {
 	IP   string
 	Port int
@@ -28,16 +27,16 @@ func RegisterService(consulAddress string, service *ConsulService) {
 	agent := client.Agent()
 
 	reg := &api.AgentServiceRegistration{
-		ID:      fmt.Sprintf("%v-%v-%v", service.Name, service.IP, service.Port), //服务节点名称
-		Name:    service.Name,                                                    //服务名称
+		ID:      fmt.Sprintf("%v-%v-%v", service.Name, service.IP, service.Port), // service id
+		Name:    service.Name,                                                    // service name
 		Tags:    service.Tag,
 		Port:    service.Port,
 		Address: service.IP,
-		Check: &api.AgentServiceCheck{ //健康检查
+		Check: &api.AgentServiceCheck{ // health check
 			//HTTP: fmt.Sprintf("http://%s:%d",service.IP,service.Port),
-			Interval:                       (time.Duration(10) * time.Second).String(),                      //检查间隔
-			GRPC:                           fmt.Sprintf("%v:%v/%v", service.IP, service.Port, service.Name), // grpc 支持，执行健康检查的地址，service 会传到 Health.Check 函数中
-			DeregisterCriticalServiceAfter: (time.Duration(1) * time.Minute).String(),                       //注销时间，相当于过期时间
+			Interval:                       (time.Duration(10) * time.Second).String(),                      // check interval
+			GRPC:                           fmt.Sprintf("%v:%v/%v", service.IP, service.Port, service.Name), // support grpc
+			DeregisterCriticalServiceAfter: (time.Duration(1) * time.Minute).String(),                       // deregister time
 		},
 	}
 	log.Printf("register to %v\n", consulAddress)
@@ -99,11 +98,9 @@ func FindServiceByID(consulAddress, serviceID string) *api.AgentService {
 	return service
 }
 
-//HealthImpl 定义一个空结构体用来进行健康检查，专门用于gRPC服务的检查
-//HealthImpl 实现了HealthServer 这个接口
+// HealthImpl dedicate to grpc service check, it realized the HealthServer interface
 type HealthImpl struct{}
 
-// Check 实现健康检查接口，这里直接返回健康状态，这里也可以有更复杂的健康检查策略，比如根据服务器负载来返回
 func (h *HealthImpl) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	log.Println("health checking")
 	return &grpc_health_v1.HealthCheckResponse{
@@ -111,12 +108,7 @@ func (h *HealthImpl) Check(ctx context.Context, req *grpc_health_v1.HealthCheckR
 	}, nil
 }
 
-// Watch 实现健康检查接口,这个没用，只是为了让HealthImpl实现RegisterHealthServer内部的interface接口
 func (h *HealthImpl) Watch(req *grpc_health_v1.HealthCheckRequest, w grpc_health_v1.Health_WatchServer) error {
 	return nil
 }
 
-/*
-当GRPC服务服务启动的时候要添加：
-grpc_health_v1.RegisterHealthServer(s, &HealthImpl{})//比普通的grpc开启多了这一步
-*/
