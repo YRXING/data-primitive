@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/YRXING/data-primitive/pkg/trace"
 	"github.com/opentracing/opentracing-go"
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	. "github.com/YRXING/data-primitive/pkg/constants"
 	"github.com/YRXING/data-primitive/pkg/util"
@@ -24,7 +24,7 @@ var _ DigitalObject = &distributor{}
 func NewDistributor() *distributor {
 	d := &distributor{
 		address: "127.0.0.1:8081",
-		name:    "distributor",
+		name:    "distributorA",
 	}
 	d.funcs = map[string]interface{}{
 		"GetPaymentPromise": d.GetPaymentPromise,
@@ -35,43 +35,63 @@ func NewDistributor() *distributor {
 func (d *distributor) Run() error {
 	// run gRPC server
 	go agent.RunServer(DISTRIBUTOR_SERVICE, d.address, d)
-	// get supplier information
 	tracer, closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
 	defer closer.Close()
 
+	// get supplier information from register center
+	log.Infof("finding supplier....")
 	conn := util.NewConn(tracer, "127.0.0.1:8080", context.Background())
 	defer conn.Close()
 
 	c := agent.NewAgentClient(conn)
+	log.Infof("supplier find: supplierA, establish connection successfully")
+
 	o := &Order{
 		OrderType:       ACCOUNT_RECEIVABLE,
 		OrderPrice:      10,
 		OrderCount:      10,
 		DistributorName: d.name,
 	}
+	log.Infof("generate order:%+v",o)
 
-	bytes, _ := json.Marshal(o)
+	bytes, err := json.Marshal(o)
+	if err != nil {
+		log.Errorf("serialization failed, %v",err)
+		return err
+	}
+
+	log.Printf("sending data to supplierA: %s",bytes)
 	p := util.GenerateInvokePacket(d.address, "GetProducts", bytes)
 	res, err := c.Interact(context.Background(), p)
 	if err != nil {
+		log.Error("get result failed: ",err)
 		return err
 	}
-	log.Println("distributor get the result: ", res)
+	log.Println("distributor get the products: ", res)
 
-	switch o.OrderType {
-	case NORMAL:
-	case ACCOUNT_RECEIVABLE:
-		// pay for products
-		conn = util.NewConn(tracer, "127.0.0.1:8082", context.Background())
-		c = agent.NewAgentClient(conn)
-		capital := &Capital{
-			BankName: "bank",
-			Num:      o.OrderPrice * o.OrderCount,
+	var resProducts Products
+	json.Unmarshal(res.GetTransport().Data,&resProducts)
+
+	if resProducts.OrderState == SUCCESS {
+		switch o.OrderType {
+		case NORMAL:
+		case ACCOUNT_RECEIVABLE:
+			// pay for products
+			log.Info("get bank information from order")
+			conn = util.NewConn(tracer, "127.0.0.1:8082", context.Background())
+			c = agent.NewAgentClient(conn)
+			log.Infof("bank find: bankA, establish connection successfully")
+			capital := &Capital{
+				BankName: "bankA",
+				Num:      o.OrderPrice * o.OrderCount,
+			}
+			log.Println("prepare capital for products...")
+			bytes, _ = json.Marshal(capital)
+			log.Printf("sending capital to bankA: %s",bytes)
+			p = util.GenerateInvokePacket(d.address, "PayForProducts", bytes)
+			res, err = c.Interact(opentracing.ContextWithSpan(context.Background(), d.parentSpan), p)
+			log.Println("the payment result:",res)
 		}
-		bytes, _ = json.Marshal(capital)
-		p = util.GenerateInvokePacket(d.address, "PayForProducts", bytes)
-		res, err = c.Interact(opentracing.ContextWithSpan(context.Background(), d.parentSpan), p)
-		log.Println(res)
 	}
 	return nil
 }
@@ -93,7 +113,8 @@ func (d *distributor) Interact(ctx context.Context, p *agent.Packet) (*agent.Pac
 			data = append(data, v.Interface())
 		}
 
-		bytes, err := json.Marshal(data)
+		// we have only one value
+		bytes, err := json.Marshal(data[0])
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -117,12 +138,13 @@ func (d *distributor) GetPaymentPromise(bytes []byte) *PaymentPromise {
 	if err != nil {
 		return nil
 	}
-
+	log.Infof("get a payment promise:%+v",p)
 	span := opentracing.StartSpan("GetPaymentPromise", opentracing.FollowsFrom(d.parentSpan.Context()))
 	defer span.Finish()
 
 	// verify the order
 	if p.DistributorName == d.name {
+		log.Infof("I promise to pay for products, signatured!")
 		p.Signatured = true
 	}
 	return &p

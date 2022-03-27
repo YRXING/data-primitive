@@ -7,7 +7,7 @@ import (
 	"github.com/YRXING/data-primitive/pkg/util"
 	"github.com/YRXING/data-primitive/proto/agent"
 	"github.com/opentracing/opentracing-go"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type bank struct {
@@ -23,7 +23,7 @@ var _ DigitalObject = &bank{}
 func NewBank() *bank {
 	b := &bank{
 		address: "127.0.0.1:8082",
-		name:    "bank",
+		name:    "bankA",
 	}
 
 	b.funcs = map[string]interface{}{
@@ -58,7 +58,8 @@ func (b *bank) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet, er
 			data = append(data, v.Interface())
 		}
 
-		bytes, err := json.Marshal(data)
+		// we have only one value
+		bytes, err := json.Marshal(data[0])
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -85,53 +86,76 @@ func (b *bank) GetLoan(bytes []byte) *Capital {
 		return nil
 	}
 
+	log.Info("get a form ",f," start processing....")
+
 	span := opentracing.StartSpan("GetLoan", opentracing.FollowsFrom(b.parentSpan.Context()))
 	defer span.Finish()
 
 	switch f.Type {
 	case ACCOUNT_RECEIVABLE:
+		log.Infof("get distributor information from form...")
 		conn := util.NewConn(opentracing.GlobalTracer(),
 			"127.0.0.1:8081",
 			context.Background())
 		defer conn.Close()
 		c := agent.NewAgentClient(conn)
+		log.Infof("distributor find: distributorA, establish connection successfully")
+
 		// generate data
 		paymentPromise := &PaymentPromise{
 			DistributorName: f.DistributorName,
 			SupplierName:    f.SupplierName,
 			Signatured:      false,
 		}
+		log.Infof("generate payment promise:%+v",paymentPromise)
+
 		bytes, _ := json.Marshal(paymentPromise)
+		log.Printf("start sending data %s....",bytes)
 		p := util.GenerateInvokePacket(b.address, "GetPaymentPromise", bytes)
 		resP, err := c.Interact(opentracing.ContextWithSpan(context.Background(), span), p)
 		if err != nil || resP.GetTransport().Data == nil {
+			log.Infof("the loan is not approved.")
 			res = nil
 		}
 
-		// verify the whether the payment promise is signatured
-		_ = json.Unmarshal(resP.GetTransport().Data, &paymentPromise)
-		if paymentPromise.Signatured {
+		// verify whether the payment promise is signatured
+		log.Infof("verify whether the payment promise is signatured...")
+		var resPaymentPromise PaymentPromise
+		json.Unmarshal(resP.GetTransport().Data, &resPaymentPromise)
+		log.Infof("get the payment promise from distributorA %s",resP.GetTransport().Data)
+		if resPaymentPromise.Signatured == true {
+			log.Infof("the loan is approved.")
 			res = &Capital{
 				BankName: b.name,
 				Num:      f.Num,
 			}
+		}else {
+			log.Infof("the loan is not approved")
+			res = &Capital{
+				BankName: b.name,
+				Num: 0,
+			}
 		}
 	default:
-		res = nil
+		res = &Capital{
+			BankName: b.name,
+			Num: 0,
+		}
 	}
 	return res
 }
 
 func (b *bank) PayForProducts(bytes []byte) bool {
 	var (
-		c *Capital
+		c Capital
 	)
 
-	err := json.Unmarshal(bytes, c)
+	err := json.Unmarshal(bytes, &c)
 	if err != nil {
+		log.Println("capital received failed!")
 		return false
 	}
-	log.Printf("I have reveived capital. %v", c)
+	log.Println("I have received capital: ", c)
 	return true
 }
 

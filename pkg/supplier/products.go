@@ -13,7 +13,7 @@ func SuccessProducts(sn string) *constants.Products {
 func ErrorProducts(sn, message string) *constants.Products {
 	return &constants.Products{
 		SupplierName: sn,
-		OrderState:   constants.SUCCESS,
+		OrderState:   constants.ERROR,
 		Message:      "Get products failed: " + message,
 	}
 }

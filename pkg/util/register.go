@@ -1,11 +1,9 @@
 package util
 
 import (
-	"context"
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/health/grpc_health_v1"
 	"time"
 )
 
@@ -96,19 +94,5 @@ func FindServiceByID(consulAddress, serviceID string) *api.AgentService {
 		return nil
 	}
 	return service
-}
-
-// HealthImpl dedicate to grpc service check, it realized the HealthServer interface
-type HealthImpl struct{}
-
-func (h *HealthImpl) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	log.Println("health checking")
-	return &grpc_health_v1.HealthCheckResponse{
-		Status: grpc_health_v1.HealthCheckResponse_SERVING,
-	}, nil
-}
-
-func (h *HealthImpl) Watch(req *grpc_health_v1.HealthCheckRequest, w grpc_health_v1.Health_WatchServer) error {
-	return nil
 }
 

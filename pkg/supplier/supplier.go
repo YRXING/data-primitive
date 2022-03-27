@@ -7,7 +7,7 @@ import (
 	"github.com/YRXING/data-primitive/pkg/util"
 	"github.com/YRXING/data-primitive/proto/agent"
 	"github.com/opentracing/opentracing-go"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type supplier struct {
@@ -60,7 +60,8 @@ func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet
 			data = append(data, v.Interface())
 		}
 
-		bytes, err := json.Marshal(data)
+		// we have only one value
+		bytes, err := json.Marshal(data[0])
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -85,21 +86,27 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 	if err != nil {
 		return ErrorProducts(s.name, "wrong data format")
 	}
+	log.Info("get an order ",o," start producing....")
 
 	span := opentracing.StartSpan("GetProducts", opentracing.FollowsFrom(s.parentSpan.Context()))
 	defer span.Finish()
 
 	switch o.OrderType {
 	case NORMAL:
+		log.Info("products ready,start transportation...")
 		res = SuccessProducts(s.name)
 	case FINACING_WAREHOUSE:
 
 	case ACCOUNT_RECEIVABLE:
+		log.Info("insufficient funds,looking for a bank to make a loan...")
+
+		log.Info("finding bank...")
 		conn := util.NewConn(opentracing.GlobalTracer(),
 			"127.0.0.1:8082",
 			context.Background())
 		defer conn.Close()
 		c := agent.NewAgentClient(conn)
+		log.Infof("bank find: bankA, establish connection successfully")
 		// generate data
 		f := &Form{
 			Type:            ACCOUNT_RECEIVABLE,
@@ -107,12 +114,24 @@ func (s *supplier) GetProducts(bytes []byte) *Products {
 			DistributorName: o.DistributorName,
 			Num:             10000,
 		}
-		bytes, _ := json.Marshal(f)
+		log.Infof("generate form: %+v",f)
+		bytes, err := json.Marshal(f)
+		if err != nil {
+			log.Errorf("serialization failed, %v",err)
+			return ErrorProducts(s.name,err.Error())
+		}
+		log.Printf("start sending data: %s",bytes)
 		p := util.GenerateInvokePacket(s.address, "GetLoan", bytes)
 		resP, err := c.Interact(opentracing.ContextWithSpan(context.Background(), span), p)
-		if err != nil || resP.GetTransport().Data == nil {
+		var capital Capital
+		json.Unmarshal(resP.GetTransport().Data,&capital)
+		if err != nil || capital.Num == 0 {
+			log.Errorf("get loan failed!")
 			res = ErrorProducts(s.name, "Insufficient funds!")
+			return res
 		}
+
+		log.Info("products ready,start transportation...")
 		res = SuccessProducts(s.name)
 
 	case ADVANCE:
