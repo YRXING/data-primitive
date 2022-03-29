@@ -6,6 +6,8 @@ import (
 	"github.com/YRXING/data-primitive/pkg/trace"
 	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
+	"sync"
+	"time"
 
 	. "github.com/YRXING/data-primitive/pkg/constants"
 	"github.com/YRXING/data-primitive/pkg/util"
@@ -32,12 +34,31 @@ func NewDistributor() *distributor {
 	return d
 }
 
+func generateOrder(name string,ch chan <-*Order, wg *sync.WaitGroup) {
+	var o *Order
+
+	t := []string{NORMAL,ACCOUNT_RECEIVABLE}
+	for i := 0; i < len(t); i++ {
+		o = &Order{
+			OrderType: t[i],
+			OrderPrice:      10,
+			OrderCount:      10,
+			DistributorName: name,
+		}
+		ch <- o
+	}
+
+	close(ch)
+	wg.Done()
+}
+
 func (d *distributor) Run() error {
 	// run gRPC server
 	go agent.RunServer(DISTRIBUTOR_SERVICE, d.address, d)
 	tracer, closer := trace.NewTracer(DISTRIBUTOR_SERVICE)
 	defer closer.Close()
-
+	time.Sleep(3*time.Second)
+	log.Println("start simulation process...")
 	// get supplier information from register center
 	log.Infof("finding supplier....")
 	conn := util.NewConn(tracer, "127.0.0.1:8080", context.Background())
@@ -46,53 +67,61 @@ func (d *distributor) Run() error {
 	c := agent.NewAgentClient(conn)
 	log.Infof("supplier find: supplierA, establish connection successfully")
 
-	o := &Order{
-		OrderType:       ACCOUNT_RECEIVABLE,
-		OrderPrice:      10,
-		OrderCount:      10,
-		DistributorName: d.name,
-	}
-	log.Infof("generate order:%+v",o)
+	ch := make(chan *Order)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	// order producer
+	go generateOrder(d.name,ch,&wg)
 
-	bytes, err := json.Marshal(o)
-	if err != nil {
-		log.Errorf("serialization failed, %v",err)
-		return err
-	}
-
-	log.Printf("sending data to supplierA: %s",bytes)
-	p := util.GenerateInvokePacket(d.address, "GetProducts", bytes)
-	res, err := c.Interact(context.Background(), p)
-	if err != nil {
-		log.Error("get result failed: ",err)
-		return err
-	}
-	log.Println("distributor get the products: ", res)
-
-	var resProducts Products
-	json.Unmarshal(res.GetTransport().Data,&resProducts)
-
-	if resProducts.OrderState == SUCCESS {
-		switch o.OrderType {
-		case NORMAL:
-		case ACCOUNT_RECEIVABLE:
-			// pay for products
-			log.Info("get bank information from order")
-			conn = util.NewConn(tracer, "127.0.0.1:8082", context.Background())
-			c = agent.NewAgentClient(conn)
-			log.Infof("bank find: bankA, establish connection successfully")
-			capital := &Capital{
-				BankName: "bankA",
-				Num:      o.OrderPrice * o.OrderCount,
+	// order consumer
+	go func(ch <-chan *Order) {
+		for o := range ch {
+			log.Infof("perceived new order:%+v",o)
+			bytes, err := json.Marshal(o)
+			if err != nil {
+				log.Errorf("serialization failed, %v",err)
 			}
-			log.Println("prepare capital for products...")
-			bytes, _ = json.Marshal(capital)
-			log.Printf("sending capital to bankA: %s",bytes)
-			p = util.GenerateInvokePacket(d.address, "PayForProducts", bytes)
-			res, err = c.Interact(opentracing.ContextWithSpan(context.Background(), d.parentSpan), p)
-			log.Println("the payment result:",res)
+
+			log.Printf("sending data to supplierA: %s",bytes)
+			p := util.GenerateInvokePacket(d.address, "GetProducts", bytes)
+			res, err := c.Interact(context.Background(), p)
+			if err != nil {
+				log.Error("get result failed: ",err)
+				return
+			}
+			log.Println("distributor get the products: ", res)
+
+			var resProducts Products
+			json.Unmarshal(res.GetTransport().Data,&resProducts)
+
+			if resProducts.OrderState == SUCCESS {
+				switch o.OrderType {
+				case NORMAL:
+				case ACCOUNT_RECEIVABLE:
+					// pay for products
+					log.Info("get bank information from order")
+					conn = util.NewConn(tracer, "127.0.0.1:8082", context.Background())
+					c = agent.NewAgentClient(conn)
+					log.Infof("bank find: bankA, establish connection successfully")
+					capital := &Capital{
+						BankName: "bankA",
+						Num:      o.OrderPrice * o.OrderCount,
+					}
+					log.Println("prepare capital for products...")
+					bytes, _ = json.Marshal(capital)
+					log.Printf("sending capital to bankA: %s",bytes)
+					p = util.GenerateInvokePacket(d.address, "PayForProducts", bytes)
+					res, err = c.Interact(opentracing.ContextWithSpan(context.Background(), d.parentSpan), p)
+					log.Println("the payment result:",res)
+				}
+			}
+			time.Sleep(5*time.Second)
 		}
-	}
+		wg.Done()
+	}(ch)
+
+	wg.Wait()
+	log.Println("simulation process finished.")
 	return nil
 }
 
