@@ -46,6 +46,7 @@ func generateOrder(name string,ch chan <-*Order, wg *sync.WaitGroup) {
 			DistributorName: name,
 		}
 		ch <- o
+		time.Sleep(5*time.Second)
 	}
 
 	close(ch)

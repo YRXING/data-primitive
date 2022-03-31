@@ -187,3 +187,93 @@ func (s *supplier) Interact(ctx context.Context, p *agent.Packet) (*agent.Packet
 
   初期根据设定好的规则，不同数据走不同的路径
 
+
+
+## 实验结果
+
+![image-20220331162210914](https://tva1.sinaimg.cn/large/e6c9d24ely1h0t53c32j3j21iw0u0taf.jpg)
+
+目前三个数源体运行过程中的日志如下
+
+- distributor
+
+  感知不同的订单数据
+
+  ```bash
+  2022/03/31 16:17:46 debug logging disabled
+  2022/03/31 16:17:46 Initializing logging reporter
+  2022/03/31 16:17:46 debug logging disabled
+  2022/03/31 16:17:46 debug logging disabled
+  2022/03/31 16:17:46 Initializing logging reporter
+  2022/03/31 16:17:46 debug logging disabled
+  INFO[0000] Starting *distributor.distributor gRPC server, listener on 127.0.0.1:8081 
+  INFO[0003] start simulation process...                  
+  INFO[0003] finding supplier....                         
+  INFO[0006] supplier find: supplierA, establish connection successfully 
+  INFO[0006] perceived new order:&{OrderType:normal OrderPrice:10 OrderCount:10 DistributorName:distributorA} 
+  INFO[0006] sending data to supplierA: {"order_type":"normal","order_price":10,"order_count":10,"distributor_name":"distributorA"} 
+  2022/03/31 16:17:52 Reporting span 2866de34dff70d8b:2866de34dff70d8b:0000000000000000:1
+  INFO[0006] distributor get the products:  type:TRANSPORT sourceAddress:"127.0.0.1:8080" transport:{data:"{\"supplier_name\":\"supplierA\",\"order_state\":1,\"message\":\"Get products successful.\"}"} 
+  INFO[0016] perceived new order:&{OrderType:account-receivable-order OrderPrice:10 OrderCount:10 DistributorName:distributorA} 
+  INFO[0016] sending data to supplierA: {"order_type":"account-receivable-order","order_price":10,"order_count":10,"distributor_name":"distributorA"} 
+  INFO[0022] get a payment promise:{DistributorName:distributorA SupplierName:supplierA Signatured:false} 
+  INFO[0022] I promise to pay for products, signatured!   
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:0c1d04a08468d71c:2fc4e9248b21887f:1
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:2fc4e9248b21887f:38fda3de0eafd03d:1
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:68a992153ec3e093:0000000000000000:1
+  INFO[0022] distributor get the products:  type:TRANSPORT sourceAddress:"127.0.0.1:8080" transport:{data:"{\"supplier_name\":\"supplierA\",\"order_state\":1,\"message\":\"Get products successful.\"}"} 
+  INFO[0022] get bank information from order              
+  INFO[0025] bank find: bankA, establish connection successfully 
+  INFO[0025] prepare capital for products...              
+  INFO[0025] sending capital to bankA: {"bank_name":"bankA","num":100} 
+  2022/03/31 16:18:11 Reporting span 68a992153ec3e093:4df9f4d333e03ac7:2fc4e9248b21887f:1
+  INFO[0025] the payment result: type:TRANSPORT sourceAddress:"127.0.0.1:8082" transport:{data:"true"} 
+  INFO[0030] simulation process finished. 
+  ```
+
+- supplier
+
+  ```bash
+  2022/03/31 16:16:20 debug logging disabled
+  2022/03/31 16:16:20 Initializing logging reporter
+  2022/03/31 16:16:20 debug logging disabled
+  INFO[0000] Starting *supplier.supplier gRPC server, listener on 127.0.0.1:8080 
+  INFO[0092] get an order {normal 10 10 distributorA} start producing.... 
+  INFO[0092] products ready,start transportation...       
+  2022/03/31 16:17:52 Reporting span 2866de34dff70d8b:046de7dede28869c:1ddf448b16f3af92:1
+  2022/03/31 16:17:52 Reporting span 2866de34dff70d8b:1ddf448b16f3af92:2866de34dff70d8b:1
+  INFO[0102] get an order {account-receivable-order 10 10 distributorA} start producing.... 
+  INFO[0102] insufficient funds,looking for a bank to make a loan... 
+  INFO[0102] finding bank...                              
+  INFO[0105] bank find: bankA, establish connection successfully 
+  INFO[0105] generate form: &{Type:account-receivable-order SupplierName:supplierA DistributorName:distributorA LogisticsName: Num:10000} 
+  INFO[0105] start sending data: {"Type":"account-receivable-order","supplier_name":"supplierA","distributor_name":"distributorA","logistics_name":"","num":10000} 
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:17abccf1adc6fea7:11862841d65c2c66:1
+  INFO[0108] products ready,start transportation...       
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:11862841d65c2c66:0679001a424cecf0:1
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:0679001a424cecf0:68a992153ec3e093:1
+  ```
+
+- bank
+
+  ```bash
+  2022/03/31 16:16:17 debug logging disabled
+  2022/03/31 16:16:17 Initializing logging reporter
+  2022/03/31 16:16:17 debug logging disabled
+  INFO[0000] Starting *bank.bank gRPC server, listener on 127.0.0.1:8082 
+  INFO[0107] get a form {account-receivable-order supplierA distributorA  10000} start processing.... 
+  INFO[0107] get distributor information from form...     
+  INFO[0110] distributor find: distributorA, establish connection successfully 
+  INFO[0110] generate payment promise:&{DistributorName:distributorA SupplierName:supplierA Signatured:false} 
+  INFO[0110] start sending data {"distributor_name":"distributorA","supplier_name":"supplierA","signatured":false}.... 
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:38fda3de0eafd03d:67b30e883a0dc7da:1
+  INFO[0110] verify whether the payment promise is signatured... 
+  INFO[0110] get the payment promise from distributorA {"distributor_name":"distributorA","supplier_name":"supplierA","signatured":true} 
+  INFO[0110] the loan is approved.                        
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:67b30e883a0dc7da:48b8f69f0c5fe3c7:1
+  2022/03/31 16:18:08 Reporting span 68a992153ec3e093:48b8f69f0c5fe3c7:17abccf1adc6fea7:1
+  INFO[0113] I have received capital:  {bankA 100}        
+  2022/03/31 16:18:11 Reporting span 68a992153ec3e093:34b157ef398e542d:4df9f4d333e03ac7:1
+  ```
+
+  
