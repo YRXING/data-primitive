@@ -104,6 +104,15 @@ INFO[0113] I have received capital:  {bankA 100}
 
 至此，这个订单完成。
 
+前端页面整体流程：
+
+1. 页面有两个按钮，start和generate data
+2. 点击start开始我们模拟过程，一共有5个数源体逐渐注册进来，需要有动态的效果展示
+3. 然后点击generate data开始生成数据给distributorA，每个数源体感受到外界的数据后，做高亮放大闪烁一下。
+4. 开始我们第一个normal订单的处理逻辑，发现、联动
+5. 再次点击generate data开始第二个流程，此流程中supplierA会认知到需要贷款，旁边的日志做高亮展示，并短暂停留。然后开始发现能提供服务的数源体，开始建立连接，发送联动报文，依次类推。
+6. 其他动态效果和之前一样。
+
 ![prototype](https://tva1.sinaimg.cn/large/e6c9d24ely1h1ezkldm0ug217o0o6mz0.gif)
 
 整个交互的动态效果类似于下图：
