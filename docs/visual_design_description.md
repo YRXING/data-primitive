@@ -104,6 +104,8 @@ INFO[0113] I have received capital:  {bankA 100}
 
 至此，这个订单完成。
 
+![prototype](https://tva1.sinaimg.cn/large/e6c9d24ely1h1ezkldm0ug217o0o6mz0.gif)
+
 整个交互的动态效果类似于下图：
 
 ![交互](https://tva1.sinaimg.cn/large/e6c9d24ely1h198xk51a6g20pl0esq51.gif)
