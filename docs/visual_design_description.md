@@ -118,3 +118,13 @@ INFO[0113] I have received capital:  {bankA 100}
 整个交互的动态效果类似于下图：
 
 ![交互](https://tva1.sinaimg.cn/large/e6c9d24ely1h198xk51a6g20pl0esq51.gif)
+
+完善：
+
+1、日志信息改为：点击数源体，弹出对话框，显示数源体的结构和实时日志信息
+
+2、数源体构建过程体现
+
+3、点击认知并定义业务，数源体旁边显示业务流程伪代码，然后再次点击联动并执行业务后，才开始执行业务流程。
+
+![image-20220420165930824](https://tva1.sinaimg.cn/large/e6c9d24ely1h1gake1be3j20uw0ldq4r.jpg)
